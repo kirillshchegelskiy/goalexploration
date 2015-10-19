@@ -149,7 +149,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	for (int j=0; j<indim; j++)
 	{
 		robot->w[winner][j] += eta1*(ranges_normd[j] - robot->w[winner][j]); // Kohonen learning for curr winner
-		std::cout << "dw[" << j << "] = " << eta1*(ranges_normd[j] - robot->w[winner][j]) << "\n";
+		//std::cout << "dw[" << j << "] = " << eta1*(ranges_normd[j] - robot->w[winner][j]) << "\n";
 		robot->w[robot->winner_old][j] += alpha*eta1*(ranges_normd[j] - robot->w[robot->winner_old][j]); // Kohonen learning for prev winner
 		}
 	
