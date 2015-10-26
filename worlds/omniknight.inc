@@ -22,12 +22,12 @@ define knight_sonar ranger
 	knightsonar( pose [ -0.2 0.1 0 165 ] )
 	
 	
-	knightsonar( pose [ 0.2 -0.1 0 -15 ] )
-	knightsonar( pose [ 0.1 -0.1 0 -45] )
-	knightsonar( pose [ 0.05 -0.1 0 -75 ] )
-	knightsonar( pose [ -0.05 -0.1 0 -105 ] )
-	knightsonar( pose [ -0.1 -0.1 0 -135 ] )
 	knightsonar( pose [ -0.2 -0.1 0 -165 ] )
+	knightsonar( pose [ -0.1 -0.1 0 -135] )
+	knightsonar( pose [ -0.05 -0.1 0 -105 ] )
+	knightsonar( pose [ 0.05 -0.1 0 -75 ] )
+	knightsonar( pose [ 0.1 -0.1 0 -45 ] )
+	knightsonar( pose [ 0.2 -0.1 0 -15 ] )
 )
 
 define knight_base position 

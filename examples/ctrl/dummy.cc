@@ -85,7 +85,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	
 	
 	robot->pos = (ModelPosition*)mod;
-	if( verbose ) robot->pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, robot );
+	robot->pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, robot );
 	robot->pos->Subscribe(); // starts the position updates
 
 	robot->sonar = (ModelRanger*)mod->GetChild( "ranger:0" );
@@ -106,16 +106,41 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	int scount = static_cast<int>(sensor_count);
 	//std::cout << scount << "\n";
 	
+	Pose pose = robot->pos->GetPose();
+	double deg = pose.a*180/3.1415926;
+	//std::cout << deg << "\n";
+	int lfront = 0;
+	int rfront = 0;
+	
 	if(scount>0)
 	{
 		ranges = new double[scount]();
+		if (deg>=0) deg = deg+15;
+		if (deg<0) deg = deg-15;
 		
 		for(int i=0; i<scount; i++)
 		{
-			ranges[i] = sensors[i].ranges[0]; //store all distances from sonar sensors in one array
-			//std::cout<<"i = "<<i<<", range[i] = "<<ranges[i]<<"\n";
+			//store all distances from sonar sensors in one array with orientation compensation
+			if (deg>=0) 
+				{
+					lfront = (int)(deg/30) % 12;
+					rfront = (11 + (int)(deg/30)) % 12;
+					ranges[(i+(int)(deg/30)) % 12] = sensors[i].ranges[0]; 
+				}
+			else if (deg<0) 
+				{
+					lfront = (12-(int)(-deg/30)) % 12;
+					rfront = (11+12-(int)(-deg/30)) % 12;
+					ranges[(i+12-(int)(-deg/30)) % 12] = sensors[i].ranges[0];
+				}
+			
 			}
 		}
+	
+	//if (deg>=0) std::cout<<"0+... = "<<(0+(int)(deg/30)) % 12<<"\n";
+	//if (deg<0) std::cout<<"0-... = "<< (12-(int)(-deg/30)) % 12<<"\n";
+	std::cout<<"rfront = "<<rfront<<", lfront = "<<lfront<<"\n";
+	
 	
 	double* ranges_normd = new double[scount]();
 	
@@ -141,11 +166,11 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		//std::cout << "tmp[i] = " << tmp << "\n";
 		robot->a[i] = tanh(tmp); // calculate PCs activation
 		tmp = 0;
-		std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
+		//std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
 		}
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); //get winner cell
-	std::cout << "Winner cell # = " << winner << "\n";
+	//std::cout << "Winner cell # = " << winner << "\n";
 	for (int j=0; j<indim; j++)
 	{
 		robot->w[winner][j] += eta1*(ranges_normd[j] - robot->w[winner][j]); // Kohonen learning for curr winner
@@ -192,20 +217,20 @@ int SonarUpdate( Model* mod, robot_t* robot )
   //printf ("%i \n", sample_count);
   
   
-	if( ranges[0] < minfrontdistance || ranges[6] < minfrontdistance)
+	if( ranges[lfront] < minfrontdistance || ranges[rfront] < minfrontdistance)
 	{
 		if( verbose ) puts( "  obstruction!" );
 		obstruction = true;
 		}
 		
-	if( ranges[6] < stopdist || ranges[0] < stopdist )
+	if( ranges[lfront] < stopdist || ranges[rfront] < stopdist )
 	{
 		if( verbose ) puts( "  stopping!" );
 		stop = true;
 		}
       
-    if( ranges[0] < stopdist ) minleft = std::min( minleft, ranges[0] );
-    else if ( ranges[6] < stopdist)	minright = std::min( minright, ranges[6] );
+    if( ranges[lfront] < stopdist ) minleft = std::min( minleft, ranges[lfront] );
+    else if ( ranges[rfront] < stopdist)	minright = std::min( minright, ranges[rfront] );
       
 	if( verbose ) 
     {
@@ -261,10 +286,12 @@ int SonarUpdate( Model* mod, robot_t* robot )
 
 int PositionUpdate( Model* mod, robot_t* robot )
 {
-  Pose pose = robot->pos->GetPose();
+  //Pose pose = robot->pos->GetPose();
 
-  printf( "Pose: [%.2f %.2f %.2f %.2f]\n",
-	  pose.x, pose.y, pose.z, pose.a );
+  //printf( "Pose: [%.2f %.2f %.2f %.2f]\n",  pose.x, pose.y, pose.z, pose.a );
+  
+  //double angle = pose.a*180/3.1415926;
+  //std::cout << angle << "\n";
 
   return 0; // run again
 }
