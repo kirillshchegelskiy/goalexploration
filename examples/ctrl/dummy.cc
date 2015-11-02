@@ -15,11 +15,13 @@ static const int avoidduration = 10;
 
 static const int placecells = 10;
 static const int indim = 12;
+//static const int lweightsnum = placecells*(placecells-1)/2;
 
 static const double eta1 = 0.045;
-static const double alpha = 0.62;
+static const double alpha = 0.00000062;
 static const double eta2 = 0.5;
 static const double delta = 0.998;
+static const double beta = 1.0;
 
 
 typedef struct
@@ -29,9 +31,10 @@ typedef struct
 	int avoidcount, randcount;
 	double  w[placecells][indim];
 	//double w_old[placecells][indim];
-	//double wlat[placecells][placecells-1];
+	double w_lat[placecells][placecells];
 	double a[placecells];
 	int winner_old;
+	double act_old;
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -58,6 +61,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	robot->avoidcount = 0;
 	robot->randcount = 0;
 	robot->winner_old = 0;
+	robot->act_old = 0.0;
 	
 	double* norms = new double[placecells]();
 	
@@ -83,6 +87,14 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		
 		}	
 	
+	
+	for (int i=0; i<placecells; i++)
+	{
+		for (int j=0; j<placecells; j++)
+		{
+			robot->w_lat[i][j] = 0.0;
+			}
+		}
 	
 	robot->pos = (ModelPosition*)mod;
 	robot->pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, robot );
@@ -137,9 +149,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			}
 		}
 	
-	//if (deg>=0) std::cout<<"0+... = "<<(0+(int)(deg/30)) % 12<<"\n";
-	//if (deg<0) std::cout<<"0-... = "<< (12-(int)(-deg/30)) % 12<<"\n";
-	std::cout<<"rfront = "<<rfront<<", lfront = "<<lfront<<"\n";
+	//std::cout<<"rfront = "<<rfront<<", lfront = "<<lfront<<"\n";
 	
 	
 	double* ranges_normd = new double[scount]();
@@ -164,13 +174,15 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			
 			}
 		//std::cout << "tmp[i] = " << tmp << "\n";
-		robot->a[i] = tanh(tmp); // calculate PCs activation
+		robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old]); // calculate PCs activation
 		tmp = 0;
 		//std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
 		}
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); //get winner cell
-	//std::cout << "Winner cell # = " << winner << "\n";
+	std::cout << "Winner cell # = " << winner << "\n";
+	robot->act_old = robot->a[winner];
+	
 	for (int j=0; j<indim; j++)
 	{
 		robot->w[winner][j] += eta1*(ranges_normd[j] - robot->w[winner][j]); // Kohonen learning for curr winner
@@ -200,6 +212,22 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			}
 		}	
+	
+	//lateral weight learning
+	robot->w_lat[winner][robot->winner_old] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
+	robot->w_lat[robot->winner_old][winner] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
+	std::cout << "w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
+	
+	for (int i=0; i<placecells; i++)
+	{
+		for (int j=0; j<placecells; j++)
+		{
+			robot->w_lat[i][j] = delta*robot->w_lat[i][j]; //lateral weight decay
+			if(i==j) robot->w_lat[i][j] = 0;
+			//std::cout << "w_lat[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
+			}
+		}
+	//std::cout << "after decay w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
 	
 	robot->winner_old = winner; //saving winner cell number for next iteration
 	
