@@ -18,7 +18,7 @@ static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
 static const double eta1 = 0.045;
-static const double alpha = 0.00000062;
+static const double alpha = 0.0;
 static const double eta2 = 0.5;
 static const double delta = 0.998;
 static const double beta = 1.0;
