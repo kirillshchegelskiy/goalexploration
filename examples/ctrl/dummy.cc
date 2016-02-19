@@ -17,11 +17,11 @@ static const int placecells = 10;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
-static const double eta1 = 0.045;
+static const double eta1 = 0.000001;
 static const double alpha = 0.0;
-static const double eta2 = 0.5;
+static const double eta2 = 0.05;
 static const double delta = 0.998;
-static const double beta = 1.0;
+static const double beta = 0.0;
 
 
 typedef struct
@@ -176,7 +176,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		//std::cout << "tmp[i] = " << tmp << "\n";
 		robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old]); // calculate PCs activation
 		tmp = 0;
-		//std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
+		std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
 		}
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); //get winner cell
@@ -216,7 +216,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	//lateral weight learning
 	robot->w_lat[winner][robot->winner_old] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
 	robot->w_lat[robot->winner_old][winner] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
-	std::cout << "w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
+	//std::cout << "w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
 	
 	for (int i=0; i<placecells; i++)
 	{
