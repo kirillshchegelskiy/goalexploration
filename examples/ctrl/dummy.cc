@@ -8,20 +8,20 @@ using namespace Stg;
 static const double cruisespeed = 0.4; 
 static const double avoidspeed = 0.05; 
 static const double avoidturn = 0.5;
-static const double minfrontdistance = 1.0; // 0.6  
+static const double minfrontdistance = 0.5; // 0.6  
 static const bool verbose = false;
-static const double stopdist = 0.3;
-static const int avoidduration = 10;
+static const double stopdist = 1.0;
+static const int avoidduration = 12;
 
 static const int placecells = 10;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
-static const double eta1 = 0.000001;
-static const double alpha = 0.0;
+static const double eta1 = 0.0001;
+static const double alpha = 0.1;
 static const double eta2 = 0.05;
 static const double delta = 0.998;
-static const double beta = 0.0;
+static const double beta = 0.5;
 
 
 typedef struct
@@ -34,7 +34,7 @@ typedef struct
 	double w_lat[placecells][placecells];
 	double a[placecells];
 	int winner_old;
-	double act_old;
+	double a_old[placecells];
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -61,7 +61,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	robot->avoidcount = 0;
 	robot->randcount = 0;
 	robot->winner_old = 0;
-	robot->act_old = 0.0;
+	//robot->act_old = 0.0;
 	
 	double* norms = new double[placecells]();
 	
@@ -69,9 +69,10 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	
 	for (int i=0; i<placecells; i++)
 	{
+		robot->a_old[i] = 0.0;
 		for (int j=0; j<indim; j++)
 		{
-			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/500;
+			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/2000;
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			norms[i] += robot->w[i][j] * robot->w[i][j];
 			}
@@ -156,7 +157,8 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	for (int i=0; i<scount; i++)
 	{
-		ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); //normalize input distances array
+		//ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); 
+		ranges_normd[i] = ranges[i]/(10.0*sqrt(indim));//normalize input distances array
 		//std::cout<<"i = "<<i<<", range_normalized[i] = "<<ranges_normd[i]<<"\n";
 		}
 	
@@ -165,23 +167,30 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	
 	double tmp = 0;
+	double tmpc = 0;
 	
 	for (int i=0; i<placecells; i++)
 	{
 		for (int j=0; j<indim; j++)
 		{
 			tmp += (robot->w[i][j])*ranges_normd[j];
-			
+			}
+		for (int k=0; k<placecells; k++)
+		{
+			tmpc += (robot->w_lat[i][k])*(robot->a_old[k]);
 			}
 		//std::cout << "tmp[i] = " << tmp << "\n";
-		robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old]); // calculate PCs activation
+		//robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old]); // calculate PCs activation
+		robot->a[i] = tanh(tmp + beta*tmpc); // calculate PCs activation with matrix multiplication
 		tmp = 0;
+		tmpc = 0;
+		
 		std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
 		}
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); //get winner cell
 	std::cout << "Winner cell # = " << winner << "\n";
-	robot->act_old = robot->a[winner];
+	//robot->act_old = robot->a[winner];
 	
 	for (int j=0; j<indim; j++)
 	{
@@ -196,12 +205,14 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	for (int i=0; i<placecells; i++)
 	{
+		
 		for (int j=0; j<indim; j++)
 		{
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			norms[i] += robot->w[i][j] * robot->w[i][j];
 			}
 		norms[i] = sqrt(norms[i]);
+		//std::cout << "norms[" << i << "] = " << norms[i] << "\n";
 		}
 	
 	for (int i=0; i<placecells; i++)
@@ -215,16 +226,16 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	//lateral weight learning
 	robot->w_lat[winner][robot->winner_old] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
-	robot->w_lat[robot->winner_old][winner] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
 	//std::cout << "w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
 	
 	for (int i=0; i<placecells; i++)
 	{
+		robot->a_old[i] = robot->a[i];
 		for (int j=0; j<placecells; j++)
 		{
 			robot->w_lat[i][j] = delta*robot->w_lat[i][j]; //lateral weight decay
 			if(i==j) robot->w_lat[i][j] = 0;
-			//std::cout << "w_lat[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
+			//std::cout << "w_lat[" << i << "][" << j << "] = " << robot->w_lat[i][j] << "\n";
 			}
 		}
 	//std::cout << "after decay w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
@@ -259,6 +270,9 @@ int SonarUpdate( Model* mod, robot_t* robot )
       
     if( ranges[lfront] < stopdist ) minleft = std::min( minleft, ranges[lfront] );
     else if ( ranges[rfront] < stopdist)	minright = std::min( minright, ranges[rfront] );
+      
+    //printf( "minleft %.3f, lfront %.3f \n", minleft, ranges[lfront] );
+	//printf( "minright %.3f, rfront %.3f \n ", minright, ranges[rfront] );  
       
 	if( verbose ) 
     {

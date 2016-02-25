@@ -5,7 +5,7 @@ define knightsonar sensor
   # define the size of each transducer [xsize ysize zsize] in meters
 	size [0.01 0.01 0.01 ] 
   # define the range bounds [min max]
-	range [0 50.0]
+	range [0 10.0]
   # define the angular field of view in degrees
 	fov 5
   # define the number of samples spread over the fov

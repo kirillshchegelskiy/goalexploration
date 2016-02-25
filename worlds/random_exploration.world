@@ -39,8 +39,8 @@ omniknight
 (		  
   # can refer to the robot by this name
   name "r0"
-  pose [ -2.266 4.656 0.000 126.178 ] 
-
+  #pose [ -2.266 4.656 0.000 126.178 ] 
+  pose [ -6.946 -6.947 0 45.000 ]
   ctrl "dummy"
 
   localization "gps"
