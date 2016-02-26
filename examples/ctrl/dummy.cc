@@ -72,7 +72,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		robot->a_old[i] = 0.0;
 		for (int j=0; j<indim; j++)
 		{
-			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/2000;
+			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/500;
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			norms[i] += robot->w[i][j] * robot->w[i][j];
 			}
@@ -226,6 +226,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	//lateral weight learning
 	robot->w_lat[winner][robot->winner_old] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
+	robot->w_lat[robot->winner_old][winner] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
 	//std::cout << "w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
 	
 	for (int i=0; i<placecells; i++)
