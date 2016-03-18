@@ -1,0 +1,48 @@
+include "omniknight.inc"
+include "evalmap.inc"
+
+# time to pause (in GUI mode) or quit (in headless mode (-g)) the simulation
+quit_time 3600 # 1 hour of simulated time
+
+paused 1
+
+# spatial resolution of the underlying occupancy grid. Default is 0.02m.
+resolution 0.02
+
+# set the multiple of real time that Stage should try to achieve. Default is 1. 
+# set to 0 to go as fast as possible.
+speedup 1.000 
+
+# configure the GUI window
+window
+(
+  size [ 500 500 ] # in pixels
+  scale 30.000   # pixels per meter
+  #center [ -0.040  -0.274 ]
+  center [ 0.000 0.000 ]
+  rotate [ 0.000  0.000 ]
+  			
+  show_data 1              # 1=on 0=off
+)
+
+# load an environment bitmap
+floorplan
+( 
+  name "cave"
+  size [16.000 16.000 0.800]
+  pose [0.000 0.000 0.000 0.000]
+  bitmap "bitmaps/cave.png"
+)
+
+
+omniknight
+(		  
+  # can refer to the robot by this name
+  name "r0"
+  #pose [ -2.266 4.656 0.000 126.178 ] 
+  pose [ -6.946 -6.947 0 45.000 ]
+  ctrl "evaluation"
+
+  localization "gps"
+  localization_origin [ 0 0 0 0 ]
+)

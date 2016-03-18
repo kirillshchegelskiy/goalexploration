@@ -9,6 +9,7 @@ SET( PLUGINS
   lasernoise
   dynamic
   dummy
+  evaluation
 )
 
 # create a library module for each plugin and link libstage to each
