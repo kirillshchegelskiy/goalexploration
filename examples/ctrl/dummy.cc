@@ -3,6 +3,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <math.h>
+#include <fstream>
 using namespace Stg;
 
 static const double cruisespeed = 0.4; 
@@ -23,6 +24,8 @@ static const double eta2 = 0.05;
 static const double delta = 0.998;
 static const double beta = 0.5;
 
+static const int trwindow = 10;
+
 
 typedef struct
 {
@@ -30,11 +33,14 @@ typedef struct
 	ModelRanger* sonar;
 	int avoidcount, randcount;
 	double  w[placecells][indim];
-	//double w_old[placecells][indim];
+	double w_old[placecells][indim];
 	double w_lat[placecells][placecells];
 	double a[placecells];
 	int winner_old;
 	double a_old[placecells];
+	bool trained;
+	double dw[trwindow];
+	bool writeflag;
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -61,6 +67,8 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	robot->avoidcount = 0;
 	robot->randcount = 0;
 	robot->winner_old = 0;
+	robot->trained = false;
+	robot->writeflag = true;
 	//robot->act_old = 0.0;
 	
 	double* norms = new double[placecells]();
@@ -84,6 +92,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		for (int j=0; j<indim; j++)
 		{
 			robot->w[i][j] = robot->w[i][j]/norms[i];
+			robot->w_old[i][j] = 0.0;
 			}
 		
 		}	
@@ -95,6 +104,11 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		{
 			robot->w_lat[i][j] = 0.0;
 			}
+		}
+	
+	for (int i=0; i<trwindow; i++)
+	{
+		robot->dw[i] = 0.0;
 		}
 	
 	robot->pos = (ModelPosition*)mod;
@@ -163,7 +177,8 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		}
 	
 	
-	
+	if (!robot->trained)
+	{
 	
 	
 	double tmp = 0;
@@ -185,7 +200,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		tmp = 0;
 		tmpc = 0;
 		
-		std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
+		//std::cout << "a[" << i << "] = " << robot->a[i] << "\n";
 		}
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); //get winner cell
@@ -224,6 +239,65 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			}
 		}	
 	
+	//Registring weights change over a time window
+	
+	double dw_curr = 0.0;
+	
+	for (int i=0; i<placecells; i++)
+	{
+		for (int j=0; j<indim; j++)
+		{
+			dw_curr += (robot->w[i][j] - robot->w_old[i][j])*(robot->w[i][j] - robot->w_old[i][j]);		
+			}
+		}
+	dw_curr = sqrt(dw_curr);
+	//std::cout << "dw_curr = " << dw_curr << "\n";
+	
+	for (int i=1; i<trwindow; i++)
+	{
+		robot->dw[i-1] = robot->dw[i];	
+		}
+	robot->dw[trwindow-1] = dw_curr;
+	
+	//double l2dw = 0.0;
+	//for (int i=0; i<trwindow; i++)
+	//{
+		//l2dw += robot->dw[i]*robot->dw[i];
+		//std::cout << "dw[" << i << "] = " << robot->dw[i] << "\n";
+	//	}
+	
+	//l2dw = sqrt(l2dw);
+	//std::cout << "L2 norm of dw: " << l2dw << "\n";
+	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
+	
+	if (l2_norm(robot->dw, trwindow)<0.0001) 
+	{
+		robot->trained = true;
+		if (robot->writeflag == true) 
+		{
+			std::ofstream f;
+			f.open("weights.txt");
+			for (int i=0; i<placecells; i++)
+			{
+				for (int j=0; j<indim; j++)
+				{
+					f << robot->w[i][j] << "\n";
+					}
+				}
+			for (int i=0; i<placecells; i++)
+			{
+				for (int j=0; j<placecells; j++)
+				{
+					f << robot->w_lat[i][j] << "\n";
+					}
+				}
+			f.close();
+			robot->writeflag = false;
+			std::cout << "Wrote to file!\n";
+			}
+		}
+	std::cout << "Training status: " << robot->trained << "\n";
+	
 	//lateral weight learning
 	robot->w_lat[winner][robot->winner_old] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
 	robot->w_lat[robot->winner_old][winner] += eta2*robot->a[winner]*robot->a[robot->winner_old]*(1-robot->w_lat[winner][robot->winner_old]);
@@ -242,8 +316,16 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	//std::cout << "after decay w_lat[" << winner << "][" << robot->winner_old << "] = " << robot->w_lat[winner][robot->winner_old] << "\n";
 	
 	robot->winner_old = winner; //saving winner cell number for next iteration
+	for (int i=0; i<placecells; i++) //saving old weights for next iteration
+	{
+		for (int j=0; j<indim; j++)
+		{
+			robot->w_old[i][j] = robot->w[i][j];
+			}
+		}
 	
 	
+	} //end of training
 	
 	
 	bool obstruction = false;

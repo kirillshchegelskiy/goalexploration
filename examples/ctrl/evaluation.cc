@@ -3,6 +3,10 @@
 #include <iostream>
 #include <typeinfo>
 #include <math.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <stdexcept>
 using namespace Stg;
 
 static const double cruisespeed = 0.4; 
@@ -16,6 +20,7 @@ static const int avoidduration = 12;
 static const int placecells = 10;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
+static const int gridnum = 10;
 
 static const double beta = 0.5;
 
@@ -27,6 +32,7 @@ typedef struct
 	double w_lat[placecells][placecells];
 	double a[placecells];
 	double a_old[placecells];
+	double locs[gridnum][gridnum][2];
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -43,6 +49,20 @@ double l2_norm(double const* u, int n)
     return sqrt(accum);
 }
 
+class BadConversion : public std::runtime_error {
+public:
+  BadConversion(const std::string& s)
+    : std::runtime_error(s)
+    { }
+};
+inline double convertToDouble(const std::string& s)
+{
+  std::istringstream i(s);
+  double x;
+  if (!(i >> x))
+    throw BadConversion("convertToDouble(\"" + s + "\")");
+  return x;
+}
 
 // Stage calls this when the model starts up
 extern "C" int Init( Model* mod, CtrlArgs* args )
@@ -52,14 +72,19 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	
 	double* norms = new double[placecells]();
 	
+	std::ifstream f("weights.txt");
+	std::string line;
 	 // Initializing weights randomly
 	
+	if (f.is_open())
+	{
 	for (int i=0; i<placecells; i++)
 	{
 		robot->a_old[i] = 0.0;
 		for (int j=0; j<indim; j++)
 		{
-			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/500;
+			if (getline (f, line)) robot->w[i][j] = convertToDouble(line);
+			//robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/500;
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			norms[i] += robot->w[i][j] * robot->w[i][j];
 			}
@@ -75,12 +100,31 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		
 		}	
 	
-	
 	for (int i=0; i<placecells; i++)
 	{
 		for (int j=0; j<placecells; j++)
 		{
-			robot->w_lat[i][j] = 0.0;
+			if (getline (f, line)) robot->w_lat[i][j] = convertToDouble(line);
+			}
+		}
+		f.close();
+	std::cout << "\n\nWeights successfully read from file!\n";
+	}
+	else std::cout << "Could not open weights file!\n";
+	
+	
+	double* grid1 = new double[gridnum+2]();
+	for (int i=0; i<gridnum+2; i++)
+	{
+		grid1[i] = 16.0*i/double(gridnum+2);
+		}
+		
+	for(int i=0; i<gridnum; i++)
+	{	
+		for(int j=0; j<gridnum; j++)
+		{
+			robot->locs[i][j][0] = grid1[i+1]-8.0;
+			robot->locs[i][j][1] = grid1[j+1]-8.0;
 			}
 		}
 	
