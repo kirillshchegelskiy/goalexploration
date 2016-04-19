@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.misc
 
 gridnum = 127
 placecells = 100
@@ -19,16 +20,21 @@ for l in f:
 	i+=1
 f.close()
 
-print winners
+#print winners
+
 
 plt.figure(1)
 
 plt.subplot(121)
-plan = plt.imread('/home/kirill/Thesis/Stage/worlds/bitmaps/cave.png')
+plan = plt.imread('/home/kirill/Thesis/Stage/worlds/bitmaps/cave_filled.png')
+plan127 = scipy.misc.imresize(plan, (127,127))
+
 plt.imshow(plan, cmap='gray')
 
+winners[np.where(plan127==0)]=-10
+
 plt.subplot(122)
-img = plt.imshow(winners, interpolation='none')
+img = plt.imshow(winners, interpolation='none', cmap='hot')
 plt.colorbar(img)
 
 plt.show()
