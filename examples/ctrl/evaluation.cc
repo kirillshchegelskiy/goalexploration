@@ -18,12 +18,12 @@ static const bool verbose = false;
 static const double stopdist = 1.0;
 static const int avoidduration = 12;
 
-static const int placecells = 10;
+static const int placecells = 100;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
-static const int gridnum = 15;
+static const int gridnum = 127;
 
-static const double beta = 0.5;
+static const double beta = 0.0;
 
 bool flagfinal = false;
 

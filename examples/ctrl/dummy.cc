@@ -14,7 +14,7 @@ static const bool verbose = false;
 static const double stopdist = 1.0;
 static const int avoidduration = 12;
 
-static const int placecells = 10;
+static const int placecells = 100;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
@@ -80,7 +80,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		robot->a_old[i] = 0.0;
 		for (int j=0; j<indim; j++)
 		{
-			robot->w[i][j] = static_cast<double>(rand() % 1000 - 500)/500;
+			robot->w[i][j] = static_cast<double>(rand() % 1000)/1000;
 			//std::cout << "w[" << i << "][" << j << "] = " << robot->w[i][j] << "\n";
 			norms[i] += robot->w[i][j] * robot->w[i][j];
 			}
@@ -270,7 +270,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	//std::cout << "L2 norm of dw: " << l2dw << "\n";
 	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
 	
-	if (l2_norm(robot->dw, trwindow)<0.0001) 
+	if (l2_norm(robot->dw, trwindow)<0.00002) 
 	{
 		robot->trained = true;
 		if (robot->writeflag == true) 
