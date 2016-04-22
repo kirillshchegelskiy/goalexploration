@@ -21,20 +21,28 @@ for l in f:
 f.close()
 
 #print winners
-
+u,c = np.unique(winners, return_counts=True)
 
 plt.figure(1)
 
-plt.subplot(121)
+#plt.subplot(121)
 plan = plt.imread('/home/kirill/Thesis/Stage/worlds/bitmaps/cave_filled.png')
-plan127 = scipy.misc.imresize(plan, (127,127))
+plan_resized = scipy.misc.imresize(plan, (gridnum,gridnum))
 
-plt.imshow(plan, cmap='gray')
+#plt.imshow(plan, cmap='gray')
 
-winners[np.where(plan127==0)]=-10
+winners[np.where(plan_resized==0)]=-10
 
-plt.subplot(122)
+
 img = plt.imshow(winners, interpolation='none', cmap='hot')
 plt.colorbar(img)
+
+#plt.subplot(122)
+plt.figure(2)
+plt.plot(u,c,'ro')
+plt.grid(True)
+plt.xticks(np.arange(min(u)-1, max(u), 10.0))
+plt.ylabel('activations on grid')
+plt.xlabel('place cell number')
 
 plt.show()

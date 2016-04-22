@@ -9,22 +9,23 @@ using namespace Stg;
 static const double cruisespeed = 0.4; 
 static const double avoidspeed = 0.05; 
 static const double avoidturn = 0.5;
-static const double minfrontdistance = 0.5; // 0.6  
+static const double minfrontdistance = 0.01; // 0.6  
 static const bool verbose = false;
-static const double stopdist = 1.0;
+static const double stopdist = 0.5;
 static const int avoidduration = 12;
 
 static const int placecells = 100;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
-static const double eta1 = 0.0001;
-static const double alpha = 0.1;
+static const double eta1 = 0.001;
+static const double alpha = 0.5;
 static const double eta2 = 0.05;
 static const double delta = 0.998;
 static const double beta = 0.5;
 
 static const int trwindow = 10;
+static const double training_criteria = 0.0004;
 
 
 typedef struct
@@ -171,8 +172,9 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	for (int i=0; i<scount; i++)
 	{
-		//ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); 
-		ranges_normd[i] = ranges[i]/(10.0*sqrt(indim));//normalize input distances array
+		ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); //classic l2 normalization
+		//ranges_normd[i] = ranges[i]/(10.0*sqrt(indim));//normalize input distances array - weird way w.r.t. max sensor range
+		//ranges_normd[i] = ranges[i]/10.0; //normalize input distances array w.r.t. max sensor range
 		//std::cout<<"i = "<<i<<", range_normalized[i] = "<<ranges_normd[i]<<"\n";
 		}
 	
@@ -248,6 +250,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		for (int j=0; j<indim; j++)
 		{
 			dw_curr += (robot->w[i][j] - robot->w_old[i][j])*(robot->w[i][j] - robot->w_old[i][j]);		
+			//std::cout << "dw_curr += " << (robot->w[i][j] - robot->w_old[i][j])*(robot->w[i][j] - robot->w_old[i][j]) << "\n";		
 			}
 		}
 	dw_curr = sqrt(dw_curr);
@@ -259,18 +262,9 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		}
 	robot->dw[trwindow-1] = dw_curr;
 	
-	//double l2dw = 0.0;
-	//for (int i=0; i<trwindow; i++)
-	//{
-		//l2dw += robot->dw[i]*robot->dw[i];
-		//std::cout << "dw[" << i << "] = " << robot->dw[i] << "\n";
-	//	}
+	std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
 	
-	//l2dw = sqrt(l2dw);
-	//std::cout << "L2 norm of dw: " << l2dw << "\n";
-	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
-	
-	if (l2_norm(robot->dw, trwindow)<0.00002) 
+	if (l2_norm(robot->dw, trwindow) < training_criteria) //was 0.00002
 	{
 		robot->trained = true;
 		if (robot->writeflag == true) 
