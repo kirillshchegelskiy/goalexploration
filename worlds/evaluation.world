@@ -28,10 +28,10 @@ window
 # load an environment bitmap
 floorplan
 ( 
-  name "cave"
+  name "circles"
   size [16.000 16.000 0.800]
   pose [0.000 0.000 0.000 0.000]
-  bitmap "bitmaps/cave.png"
+  bitmap "bitmaps/circles.png"
 )
 
 

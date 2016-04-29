@@ -18,7 +18,7 @@ static const bool verbose = false;
 static const double stopdist = 1.0;
 static const int avoidduration = 12;
 
-static const int placecells = 100;
+static const int placecells = 50;
 static const int indim = 12;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 static const int gridnum = 127;
@@ -202,11 +202,21 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	//std::cout<<"rfront = "<<rfront<<", lfront = "<<lfront<<"\n";
 		
+	double* ranges_bit = new double[scount]();
+	for (int i=0; i<scount; i++)
+	{
+		if (ranges[i]>3.0) ranges_bit[i]=0.0;
+		else ranges_bit[i]=1.0;
+		}
 	double* ranges_normd = new double[scount]();
 	
 	for (int i=0; i<scount; i++)
 	{ 
-		ranges_normd[i] = ranges[i]/(10.0*sqrt(indim)); // normalize input distances array
+		ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); //classic l2 normalization
+		//ranges_normd[i] = ranges[i]/(10.0*sqrt(indim)); // normalize input distances array
+		
+		//ranges_normd[i] = ranges_bit[i]/l2_norm(ranges_bit, scount); //bit input normalization
+		
 		//std::cout<<"i = "<<i<<", range_normalized[i] = "<<ranges_normd[i]<<"\n";
 		}	
 	
