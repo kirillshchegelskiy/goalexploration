@@ -9,13 +9,13 @@ using namespace Stg;
 static const double cruisespeed = 0.4; 
 static const double avoidspeed = 0.05; 
 static const double avoidturn = 0.5;
-static const double minfrontdistance = 0.01; // 0.6  
+static const double minfrontdistance = 0.2; // 0.6  
 static const bool verbose = false;
 static const double stopdist = 0.5;
 static const int avoidduration = 12;
 
 static const int placecells = 50;
-static const int indim = 12;
+static const int indim = 72;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
 static const double eta1 = 0.001;
@@ -25,7 +25,7 @@ static const double delta = 0.998;
 static const double beta = 0.5;
 
 static const int trwindow = 10;
-static const double training_criteria = 0.0003;
+static const double training_criteria = 0.0011;
 
 
 typedef struct
@@ -132,34 +132,39 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	double* ranges = new double[1]();
 	
 	int scount = static_cast<int>(sensor_count);
-	//std::cout << scount << "\n";
+	//std::cout << "scount = " << scount << "\n";
 	
 	Pose pose = robot->pos->GetPose();
-	double deg = pose.a*180/3.1415926;
-	//std::cout << deg << "\n";
+	double deg = pose.a*180.0/3.1415926;
+	//std::cout << "deg = " << deg << "\n";
 	int lfront = 0;
 	int rfront = 0;
 	
 	if(scount>0)
 	{
 		ranges = new double[scount]();
-		if (deg>=0) deg = deg+15;
-		if (deg<0) deg = deg-15;
+		if (deg>=0) deg = deg+360/(indim*2);
+		if (deg<0) deg = deg-360/(indim*2);
+		
+		int avoid_param = 0;
+		
+		if (indim==36) avoid_param = 2;
+		if (indim==72) avoid_param = 4;
 		
 		for(int i=0; i<scount; i++)
 		{
 			//store all distances from sonar sensors in one array with orientation compensation
 			if (deg>=0) 
 				{
-					lfront = (int)(deg/30) % 12;
-					rfront = (11 + (int)(deg/30)) % 12;
-					ranges[(i+(int)(deg/30)) % 12] = sensors[i].ranges[0]; 
+					lfront = (int)(deg/(360/indim) + avoid_param) % indim;
+					rfront = (indim-1 + (int)(deg/(360/indim)) - avoid_param) % indim;
+					ranges[(i+(int)(deg/(360/indim))) % indim] = sensors[i].ranges[0]; 
 				}
 			else if (deg<0) 
 				{
-					lfront = (12-(int)(-deg/30)) % 12;
-					rfront = (11+12-(int)(-deg/30)) % 12;
-					ranges[(i+12-(int)(-deg/30)) % 12] = sensors[i].ranges[0];
+					lfront = (indim-(int)(-deg/(360/indim)) + avoid_param) % indim;
+					rfront = (indim-1+indim-(int)(-deg/(360/indim)) - avoid_param) % indim;
+					ranges[(i+indim-(int)(-deg/(360/indim))) % indim] = sensors[i].ranges[0];
 				}
 			
 			}

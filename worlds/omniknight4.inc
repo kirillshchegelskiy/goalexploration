@@ -3,7 +3,7 @@
 define knightsonar sensor
 (
   # define the size of each transducer [xsize ysize zsize] in meters
-	size [0.01 0.01 0.01 ] 
+	size [0.001 0.001 0.001 ] 
   # define the range bounds [min max]
 	range [0 10.0]
   # define the angular field of view in degrees
@@ -14,20 +14,10 @@ define knightsonar sensor
 
 define knight_sonar ranger
 (
-	knightsonar( pose [ 0.2 0.1 0 15 ] )
-	knightsonar( pose [ 0.1 0.1 0 45] )
-	knightsonar( pose [ 0.05 0.1 0 75 ] )
-	knightsonar( pose [ -0.05 0.1 0 105 ] )
-	knightsonar( pose [ -0.1 0.1 0 135 ] )
-	knightsonar( pose [ -0.2 0.1 0 165 ] )
-	
-	
-	knightsonar( pose [ -0.2 -0.1 0 -165 ] )
+	knightsonar( pose [ 0.1 0.1 0 45 ] )
+	knightsonar( pose [ -0.1 0.1 0 135] )
 	knightsonar( pose [ -0.1 -0.1 0 -135] )
-	knightsonar( pose [ -0.05 -0.1 0 -105 ] )
-	knightsonar( pose [ 0.05 -0.1 0 -75 ] )
-	knightsonar( pose [ 0.1 -0.1 0 -45 ] )
-	knightsonar( pose [ 0.2 -0.1 0 -15 ] )
+	knightsonar( pose [ 0.1 -0.1 0 -45] )
 )
 
 define knight_base position 
@@ -71,7 +61,6 @@ define omniknight omniknight_base
     point[0] [-0.2 0.12]
     point[1] [-0.2 -0.12]
     point[2] [-0.12 -0.2555 ]
-
     point[3] [0.12 -0.2555]
     point[4] [0.2 -0.12]
     point[5] [0.2 0.12]

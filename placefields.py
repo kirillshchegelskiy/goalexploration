@@ -27,13 +27,13 @@ f.close()
 plt.figure(1)
 
 #plt.subplot(121)
-plan = plt.imread('/home/kirill/Thesis/Stage/worlds/bitmaps/circles_filled.png')
-plan1bit = np.mean(plan, axis=2)
-plan_resized = scipy.misc.imresize(plan1bit, (gridnum,gridnum))
+plan = plt.imread('/home/kirill/Thesis/Stage/worlds/bitmaps/cave_filled.png')
+#plan1bit = np.mean(plan, axis=2) #uncomment for circles
+plan_resized = scipy.misc.imresize(plan, (gridnum,gridnum))
 
 #plt.imshow(plan, cmap='gray')
 #print np.mean(plan, axis=2)
-winners[np.where(plan_resized==0)]=-10
+winners[np.where(plan_resized==0)]=-5
 u,c = np.unique(winners, return_counts=True)
 c[0]=0 
 

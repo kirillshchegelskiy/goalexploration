@@ -19,7 +19,7 @@ static const double stopdist = 1.0;
 static const int avoidduration = 12;
 
 static const int placecells = 50;
-static const int indim = 12;
+static const int indim = 72;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 static const int gridnum = 127;
 
@@ -172,36 +172,28 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	Pose pose = robot->pos->GetPose();
 	double deg = pose.a*180/3.1415926;
 	//std::cout << deg << "\n";
-	int lfront = 0;
-	int rfront = 0;
 	
 	if(scount>0)
 	{
 		ranges = new double[scount]();
-		if (deg>=0) deg = deg+15;
-		if (deg<0) deg = deg-15;
+		if (deg>=0) deg = deg+360/(indim*2);
+		if (deg<0) deg = deg-360/(indim*2);
 		
 		for(int i=0; i<scount; i++)
 		{
 			//store all distances from sonar sensors in one array with orientation compensation
 			if (deg>=0) 
 				{
-					lfront = (int)(deg/30) % 12;
-					rfront = (11 + (int)(deg/30)) % 12;
-					ranges[(i+(int)(deg/30)) % 12] = sensors[i].ranges[0]; 
+					ranges[(i+(int)(deg/(360/indim))) % indim] = sensors[i].ranges[0]; 
 				}
 			else if (deg<0) 
 				{
-					lfront = (12-(int)(-deg/30)) % 12;
-					rfront = (11+12-(int)(-deg/30)) % 12;
-					ranges[(i+12-(int)(-deg/30)) % 12] = sensors[i].ranges[0];
+					ranges[(i+indim-(int)(-deg/(360/indim))) % indim] = sensors[i].ranges[0];
 				}
 			
 			}
 		}
-	
-	//std::cout<<"rfront = "<<rfront<<", lfront = "<<lfront<<"\n";
-		
+
 	double* ranges_bit = new double[scount]();
 	for (int i=0; i<scount; i++)
 	{
@@ -286,7 +278,7 @@ int PositionUpdate( Model* mod, robot_t* robot )
   //std::cout << "absx = " << std::abs(pose.x-robot->locs[robot->cnti][robot->cntj][0]) <<"\n";
   
 	//Go through list of desired locations and visit them all one by one
-  robot->pos->GoTo(robot->locs[robot->cnti][robot->cntj][0],robot->locs[robot->cnti][robot->cntj][1],1.57);
+  robot->pos->GoTo(robot->locs[robot->cnti][robot->cntj][0],robot->locs[robot->cnti][robot->cntj][1],1.5708);
   if(std::abs(pose.x-robot->locs[robot->cnti][robot->cntj][0])<0.03 && std::abs(pose.y-robot->locs[robot->cnti][robot->cntj][1])<0.03)
   {
 	  //std::cout<<"Reached locs["<<robot->cnti<<"]["<<robot->cntj<<"]\n";
