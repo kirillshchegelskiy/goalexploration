@@ -1,4 +1,4 @@
-include "omniknight72.inc"
+include "omniknight36.inc"
 include "map.inc"
 
 # time to pause (in GUI mode) or quit (in headless mode (-g)) the simulation

@@ -15,7 +15,7 @@ static const double stopdist = 0.5;
 static const int avoidduration = 12;
 
 static const int placecells = 50;
-static const int indim = 72;
+static const int indim = 36;
 //static const int lweightsnum = placecells*(placecells-1)/2;
 
 static const double eta1 = 0.001;
