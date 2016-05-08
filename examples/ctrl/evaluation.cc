@@ -32,7 +32,7 @@ typedef struct
 	ModelPosition* pos;
 	ModelRanger* sonar;
 	double  w[placecells][indim];
-	double w_lat[placecells][placecells];
+	double w_lat[placecells][placecells][2];
 	double a[placecells];
 	double a_old[placecells];
 	double locs[gridnum][gridnum][2];
@@ -112,7 +112,8 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	{
 		for (int j=0; j<placecells; j++)
 		{
-			if (getline (f, line)) robot->w_lat[i][j] = convertToDouble(line);
+			if (getline (f, line)) robot->w_lat[i][j][0] = convertToDouble(line);
+			if (getline (f, line)) robot->w_lat[i][j][1] = convertToDouble(line);
 			}
 		}
 	f.close();
@@ -223,10 +224,10 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			}
 		for (int k=0; k<placecells; k++)
 		{
-			tmpc += (robot->w_lat[i][k])*(robot->a_old[k]);
+			tmpc += (robot->w_lat[i][k][0])*(robot->a_old[k]);
 			}
 		//std::cout << "tmp[i] = " << tmp << "\n";
-		//robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old]); // calculate PCs activation
+		//robot->a[i] = tanh(tmp + beta*robot->act_old*robot->w_lat[i][robot->winner_old][0]); // calculate PCs activation
 		robot->a[i] = tanh(tmp + beta*tmpc); // calculate PCs activation with matrix multiplication
 		tmp = 0;
 		tmpc = 0;

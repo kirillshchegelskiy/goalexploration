@@ -10,6 +10,8 @@ SET( PLUGINS
   dynamic
   dummy
   evaluation
+  navigation
+  random_walk
 )
 
 # create a library module for each plugin and link libstage to each

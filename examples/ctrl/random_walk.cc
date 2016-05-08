@@ -13,6 +13,9 @@ static const double minfrontdistance = 0.2; // 0.6
 static const bool verbose = false;
 static const double stopdist = 0.5;
 static const int avoidduration = 12;
+static const int minforward = 50;
+static const int maxforward = 100;
+static const int momentum = 30;
 
 static const int placecells = 50;
 static const int indim = 36;
@@ -33,7 +36,8 @@ typedef struct
 {
 	ModelPosition* pos;
 	ModelRanger* sonar;
-	int avoidcount, randcount;
+	int avoidcount, randcount, forwardcount, turncount;
+	int forwarddist, turndist;
 	double  w[placecells][indim];
 	double w_old[placecells][indim];
 	double w_lat[placecells][placecells][2];
@@ -68,10 +72,14 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
  
 	robot->avoidcount = 0;
 	robot->randcount = 0;
+	robot->forwardcount = 0;
+	robot->turncount = 0;
 	robot->winner_old = 0;
 	robot->trained = false;
 	robot->writeflag = true;
 	//robot->act_old = 0.0;
+	robot->forwarddist = rand()%(maxforward-minforward) + minforward;
+	robot->turndist = 2*(rand()%momentum) - momentum + 1;
 	
 	double* norms = new double[placecells]();
 	
@@ -324,7 +332,6 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		else
 		{
 			robot->w_lat[winner][robot->winner_old][1] += eta3*(pose.a - robot->w_lat[winner][robot->winner_old][1]);
-			std::cout << "da = " << eta3*(pose.a - robot->w_lat[winner][robot->winner_old][1]) <<"\n";
 		} 
 	}
 	
@@ -335,7 +342,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		{
 			robot->w_lat[i][j][0] = delta*robot->w_lat[i][j][0]; //lateral weight decay
 			if(i==j) robot->w_lat[i][j][0] = 0;
-			//std::cout << "w_lat[" << i << "][" << j << "][0] = " << robot->w_lat[i][j][0] << "\n";
+			//std::cout << "w_lat[" << i << "][" << j << "] = " << robot->w_lat[i][j] << "\n";
 			}
 		}
 	//std::cout << "after decay w_lat[" << winner << "][" << robot->winner_old << "][0] = " << robot->w_lat[winner][robot->winner_old][0] << "\n";
@@ -419,12 +426,42 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	else
     {
 		if( verbose ) puts( "Cruise" );
-
+		
+		
 		robot->avoidcount = 0;
-		robot->pos->SetXSpeed( cruisespeed );	  
-		robot->pos->SetTurnSpeed(  0 );
+		
+		if (robot->forwardcount==robot->forwarddist)
+		{
+			//robot->forwardcount = 0;
+			//robot->forwarddist = rand()%(maxforward-minforward) + minforward;
+			robot->pos->SetXSpeed(0);
+			if (robot->turndist > 0) 
+			{
+				robot->pos->SetTurnSpeed(+avoidturn);
+				robot->turncount++;
+			}
+			if (robot->turndist < 0) 
+			{
+				robot->pos->SetTurnSpeed(-avoidturn);
+				robot->turncount--;
+			}
+			
+			if (robot->turncount==robot->turndist)
+			{
+				robot->forwardcount = 0;
+				robot->forwarddist = rand()%(maxforward-minforward) + minforward;
+				robot->turncount = 0;
+				robot->turndist = 2*(rand()%momentum) - momentum + 1;
+			}
 		}
-
+		else
+		{
+			robot->pos->SetXSpeed(cruisespeed);	  
+			robot->pos->SetTurnSpeed(0);
+			robot->forwardcount++;
+		}
+	}
+  //std::cout << "forwardcount = "<<robot->forwardcount<<", forwarddist = "<<robot->forwarddist<<", turncount = "<<robot->turncount<<", turndist = "<<robot->turndist<<"\n";
   //  if( robot->pos->Stalled() )
   // 	 {
   // 		robot->pos->SetSpeed( 0,0,0 );
