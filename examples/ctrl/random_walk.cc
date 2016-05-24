@@ -186,6 +186,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	{
 		if (ranges[i]>3.0) ranges_bit[i]=0.0;
 		else ranges_bit[i]=1.0;
+		//std::cout<<"ranges_bit[" << i << "] = "<<ranges_bit[i]<<"\n";
 		}
 	
 	double* ranges_normd = new double[scount]();
@@ -194,6 +195,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	{
 		//std::cout<<"ranges[" << i << "] = "<<ranges[i]<<"\n";
 		ranges_normd[i] = ranges[i]/l2_norm(ranges, scount); //classic l2 normalization
+		
 		//ranges_normd[i] = ranges[i]/(10.0*sqrt(indim));//normalize input distances array - weird way w.r.t. max sensor range
 		//ranges_normd[i] = ranges[i]/10.0; //normalize input distances array w.r.t. max sensor range
 		
@@ -286,9 +288,9 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		}
 	robot->dw[trwindow-1] = dw_curr;
 	
-	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
+	std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
 	
-	if (l2_norm(robot->dw, trwindow) < training_criteria) //was 0.00002
+	if (l2_norm(robot->dw, trwindow) < training_criteria) 
 	{
 		robot->trained = true;
 		if (robot->writeflag == true) 
@@ -327,11 +329,31 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	if (winner!=robot->winner_old)
 	{
 		//NOTATION w_lat[i][j] MEANS FROM j TO i
-		std::cout << "Went from PF#" << robot->winner_old << " to PF#" << winner << "\n";
+		//std::cout << "Went from PF#" << robot->winner_old << " to PF#" << winner << "\n";
 		if (robot->w_lat[winner][robot->winner_old][1] == 0.0) robot->w_lat[winner][robot->winner_old][1] = pose.a;
 		else
 		{
-			robot->w_lat[winner][robot->winner_old][1] += eta3*(pose.a - robot->w_lat[winner][robot->winner_old][1]);
+			double tmpa = pose.a;
+			if (tmpa<=0 && robot->w_lat[winner][robot->winner_old][1]>0) 
+			{
+				tmpa+=2*3.1415926;
+				robot->w_lat[winner][robot->winner_old][1] += eta3*(tmpa - robot->w_lat[winner][robot->winner_old][1]);
+				if(robot->w_lat[winner][robot->winner_old][1] > 3.1415926)robot->w_lat[winner][robot->winner_old][1]-=2*3.1415926;
+			}
+			else if (tmpa>=0 && robot->w_lat[winner][robot->winner_old][1]>0) 
+			{
+				robot->w_lat[winner][robot->winner_old][1] += eta3*(tmpa - robot->w_lat[winner][robot->winner_old][1]);
+			}
+			else if (tmpa>=0 && robot->w_lat[winner][robot->winner_old][1]<0) 
+			{
+				tmpa-=2*3.1415926;
+				robot->w_lat[winner][robot->winner_old][1] += eta3*(tmpa - robot->w_lat[winner][robot->winner_old][1]);
+				if(robot->w_lat[winner][robot->winner_old][1] < -3.1415926)robot->w_lat[winner][robot->winner_old][1]+=2*3.1415926;
+			}
+			else if (tmpa<=0 && robot->w_lat[winner][robot->winner_old][1]<0) 
+			{
+				robot->w_lat[winner][robot->winner_old][1] += eta3*(tmpa - robot->w_lat[winner][robot->winner_old][1]);
+			}
 		} 
 	}
 	

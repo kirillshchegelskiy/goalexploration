@@ -44,6 +44,7 @@ typedef struct
 	int goals[placecells];
 	int currgoal;
 	int ttlgoals;
+	int inter[placecells];
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -87,13 +88,17 @@ int minDistance(double dist[], bool sptSet[], int ttlgoals)
    return min_index;
 }
 
-double* dijkstra(double w_lat[placecells][placecells][2], int goals[placecells], int ttlgoals, int src, int currgoal)
+void dijkstra(double w_lat[placecells][placecells][2], int goals[placecells], int ttlgoals, int src, int currgoal, int inter[placecells])
 {
+	
+	if (src==currgoal) inter[0] = -1;
+	else {
 	double dist[ttlgoals];
 	bool sptSet[ttlgoals];
 	double graph[ttlgoals][ttlgoals];
-	double inter[];
 	int parent[ttlgoals];
+	
+	//std::cout<<"Started Dijkstra\n";
 	
 	for (int i=0; i<ttlgoals; i++)
 	{
@@ -103,16 +108,25 @@ double* dijkstra(double w_lat[placecells][placecells][2], int goals[placecells],
 		}
 	}
 	
-	for (int i=0; i<placecells; i++) dist[i]=DBL_MAX, sptSet[i]=false;
+	//std::cout<<"Stored 1/w_lat\n";
 	
-	dist[src] = 0;
+	for (int i=0; i<ttlgoals; i++) dist[i]=DBL_MAX, sptSet[i]=false, inter[i]=-1, parent[i]=-1;
+	
+	int src_ind = std::distance(goals, std::find(goals, goals + ttlgoals, src));
+	//std::cout<<"src = "<<src<<", src_ind = "<<src_ind<<"\n";
+	
+	dist[src_ind] = 0;
+	//dijkstra(robot->w_lat, robot->goals, robot->ttlgoals, robot->goals[0], robot->currgoal, robot->inter);
+	//std::cout<<"Dijkstra initialization complete\n";
 	
 	for (int count = 0; count < ttlgoals-1; count++)
 	{
        // Pick the minimum distance vertex from the set of vertices not
        // yet processed. u is always equal to src in first iteration.
+        //std::cout<<"Started Dijkstra step "<<count<<"\n";
+       
 		int u = minDistance(dist, sptSet, ttlgoals);
- 
+		//std::cout<<"Found minDistance for vertex "<<u<<"("<<goals[u]<<")\n";
        // Mark the picked vertex as processed
 		sptSet[u] = true;
  
@@ -124,13 +138,22 @@ double* dijkstra(double w_lat[placecells][placecells][2], int goals[placecells],
          // smaller than current value of dist[v]
 			if (!sptSet[v] && graph[v][u] && dist[u] != DBL_MAX && dist[u]+graph[v][u] < dist[v]) 
 			{
+				//std::cout<<"Updating vertex "<<v<<"("<<goals[v]<<") with "<<graph[v][u]<<"\n";
 				parent[v] = u;
 				dist[v] = dist[u] + graph[v][u];
 			}
 		}
 	}
-	
-	return inter;
+	//std::cout<<"Dijkstra complete!\n";
+	int tmp = std::distance(goals, std::find(goals, goals + ttlgoals, currgoal));;
+	for (int i=0; i<ttlgoals-1; i++)
+	{
+		
+		tmp = parent[tmp];
+		if (tmp==src_ind) break;
+		inter[i] = goals[tmp];
+	}
+	}
 }
 
 
@@ -163,6 +186,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	{
 		robot->a_old[i] = 0.0;
 		robot->goals[i] = -1;
+		robot->inter[i] = -1;
 		for (int j=0; j<indim; j++)
 		{
 			if (getline (f, line)) robot->w[i][j] = convertToDouble(line);
@@ -204,7 +228,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	//std::cout << "Total number of goals = " << robot->ttlgoals << "\n";
 	robot->currgoal = robot->goals[rand()%(robot->ttlgoals)];
 	std::cout << "Next goal = " << robot->currgoal << "\n";
-	
+	/*
 	for (int i=0; i<robot->ttlgoals; i++)
 	{
 		for (int j=0; j<robot->ttlgoals; j++)
@@ -212,6 +236,15 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 			std::cout << "1/w_lat["<<robot->goals[i]<<"]["<<robot->goals[j]<<"][0] = "<<1/robot->w_lat[robot->goals[i]][robot->goals[j]][0]<<", "<<"w_lat["<<robot->goals[i]<<"]["<<robot->goals[j]<<"][1] = "<<robot->w_lat[robot->goals[i]][robot->goals[j]][1]<<"\n";
 		}
 	}
+	*/
+	dijkstra(robot->w_lat, robot->goals, robot->ttlgoals, robot->goals[0], robot->currgoal, robot->inter);
+	std::cout << "Intermediate goals: \n";
+	for (int i=0; i<robot->ttlgoals; i++)
+	{
+		if (robot->inter[i]!=-1) std::cout << robot->inter[i] << " ";
+	}
+	
+	
 	
 	robot->pos = (ModelPosition*)mod;
 	robot->pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, robot );

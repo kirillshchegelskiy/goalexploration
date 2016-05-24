@@ -29,6 +29,7 @@ plan_resized = scipy.misc.imresize(plan, (gridnum,gridnum))
 
 #plt.imshow(plan, cmap='gray')
 #print np.mean(plan, axis=2)
+print "Obstacle area: ", np.shape(np.where(plan_resized==0))
 winners[np.where(plan_resized==0)]=-5
 u,c = np.unique(winners, return_counts=True)
 c[0]=0 
@@ -38,8 +39,9 @@ print "Threshold: ", float(gridnum)*float(gridnum)/20.0
 print "Goals array: ", goals
 np.savetxt("goals.txt", goals, fmt='%d')
 
-pfs_counts = c[np.where(c>float(gridnum)*float(gridnum)/100.0)]
+pfs_counts = c[np.where(c>float(gridnum)*float(gridnum)/20.0)]
 
+print "PF sizes: ", pfs_counts
 print "Mean value of Place Field sizes: ", np.mean(pfs_counts)
 print "Variance (sqrt) of Place Field sizes: ", np.sqrt(np.var(pfs_counts))
 
