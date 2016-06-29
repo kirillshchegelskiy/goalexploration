@@ -31,6 +31,8 @@ static const double eta3 = 0.2;
 static const int trwindow = 10;
 static const double training_criteria = 0.0008;
 
+static const int maxitrs = 2000;
+
 
 typedef struct
 {
@@ -47,6 +49,7 @@ typedef struct
 	bool trained;
 	double dw[trwindow];
 	bool writeflag;
+	int itrs;
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -80,6 +83,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	//robot->act_old = 0.0;
 	robot->forwarddist = rand()%(maxforward-minforward) + minforward;
 	robot->turndist = 2*(rand()%momentum) - momentum + 1;
+	robot->itrs = 0;
 	
 	double* norms = new double[placecells]();
 	
@@ -207,7 +211,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	if (!robot->trained)
 	{
-	
+	robot->itrs+=1;
 	
 	double tmp = 0;
 	double tmpc = 0;
@@ -288,7 +292,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		}
 	robot->dw[trwindow-1] = dw_curr;
 	
-	std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
+	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
 	
 	if (l2_norm(robot->dw, trwindow) < training_criteria) 
 	{
@@ -296,6 +300,35 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		if (robot->writeflag == true) 
 		{
 			std::cout << "TRAINED!\n";
+			std::ofstream f;
+			f.open("weights.txt");
+			for (int i=0; i<placecells; i++)
+			{
+				for (int j=0; j<indim; j++)
+				{
+					f << robot->w[i][j] << "\n";
+					}
+				}
+			for (int i=0; i<placecells; i++)
+			{
+				for (int j=0; j<placecells; j++)
+				{
+					f << robot->w_lat[i][j][0] << "\n";
+					f << robot->w_lat[i][j][1] << "\n";
+					}
+				}
+			f.close();
+			robot->writeflag = false;
+			std::cout << "Wrote to file!\n";
+			}
+		}
+		
+		if (robot->itrs == maxitrs) 
+	{
+		robot->trained = true;
+		if (robot->writeflag == true) 
+		{
+			std::cout << "REACHED MAXITRS!\n";
 			std::ofstream f;
 			f.open("weights.txt");
 			for (int i=0; i<placecells; i++)

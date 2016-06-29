@@ -278,7 +278,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		}
 	robot->dw[trwindow-1] = dw_curr;
 	
-	std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
+	//std::cout << "l2_norm of dw: " << l2_norm(robot->dw, trwindow) << "\n";
 	
 	if (l2_norm(robot->dw, trwindow) < training_criteria) 
 	{

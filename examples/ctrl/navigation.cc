@@ -17,9 +17,9 @@ using namespace Stg;
 static const double cruisespeed = 0.4; 
 static const double avoidspeed = 0.05; 
 static const double avoidturn = 0.5;
-static const double minfrontdistance = 0.5; // 0.6  
+static const double minfrontdistance = 0.2; // 0.6  
 static const bool verbose = false;
-static const double stopdist = 1.0;
+static const double stopdist = 0.5;
 static const int avoidduration = 12;
 static const int minforward = 50;
 static const int maxforward = 100;
@@ -29,6 +29,8 @@ static const int placecells = 50;
 static const int indim = 36;
 
 static const double beta = 0.0;
+
+static const int maxruns = 1000;
 
 typedef struct
 {
@@ -45,6 +47,13 @@ typedef struct
 	int currgoal;
 	int ttlgoals;
 	int inter[placecells];
+	int localgoal;
+	int localind;
+	bool turnedtogoal;
+	bool moving;
+	int currsrc;
+	int goalrunnmbr;
+	int itrstotal[maxruns];
 	} robot_t;
 
 int SonarUpdate( Model* mod, robot_t* robot );
@@ -91,7 +100,10 @@ int minDistance(double dist[], bool sptSet[], int ttlgoals)
 void dijkstra(double w_lat[placecells][placecells][2], int goals[placecells], int ttlgoals, int src, int currgoal, int inter[placecells])
 {
 	
-	if (src==currgoal) inter[0] = -1;
+	if (src==currgoal)
+		{
+			for (int i=0; i<ttlgoals; i++) inter[i] = -1;
+		}
 	else {
 	double dist[ttlgoals];
 	bool sptSet[ttlgoals];
@@ -167,13 +179,17 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	
 	robot->itrs=0;
 	robot->ttlgoals=0;
+	
 	robot->avoidcount = 0;
 	robot->randcount = 0;
 	robot->forwardcount = 0;
 	robot->turncount = 0;
-	
 	robot->forwarddist = rand()%(maxforward-minforward) + minforward;
 	robot->turndist = 2*(rand()%momentum) - momentum + 1;
+	
+	robot->turnedtogoal = false;
+	robot->currsrc = 0;
+	robot->goalrunnmbr = 0;
 	
 	std::ifstream f("weights.txt");
 	std::ifstream fg("goals.txt");
@@ -227,7 +243,7 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 	}
 	//std::cout << "Total number of goals = " << robot->ttlgoals << "\n";
 	robot->currgoal = robot->goals[rand()%(robot->ttlgoals)];
-	std::cout << "Next goal = " << robot->currgoal << "\n";
+	//std::cout << "Next goal = " << robot->currgoal << "\n";
 	/*
 	for (int i=0; i<robot->ttlgoals; i++)
 	{
@@ -237,14 +253,32 @@ extern "C" int Init( Model* mod, CtrlArgs* args )
 		}
 	}
 	*/
+	/*for (int i=0; i<robot->ttlgoals; i++)
+	{
+		for (int j=0; j<robot->ttlgoals; j++)
+		{
+			std::cout << "w_lat["<<robot->goals[i]<<"]["<<robot->goals[j]<<"][1] = "<<robot->w_lat[robot->goals[i]][robot->goals[j]][1]<<"\n";
+		}
+	}*/
+	
 	dijkstra(robot->w_lat, robot->goals, robot->ttlgoals, robot->goals[0], robot->currgoal, robot->inter);
-	std::cout << "Intermediate goals: \n";
-	for (int i=0; i<robot->ttlgoals; i++)
+	//std::cout << "Intermediate goals: \n";
+	/*for (int i=0; i<robot->ttlgoals; i++)
 	{
 		if (robot->inter[i]!=-1) std::cout << robot->inter[i] << " ";
+	}*/
+	//std::cout<<"\n";
+	for (int i=robot->ttlgoals-1; i>-1; i--)
+	{
+		if (robot->inter[i]!=-1) 
+		{
+			robot->localgoal = robot->inter[i];
+			robot->localind = i;
+			break;
+		}
+		if (i==0) robot->localgoal = robot->currgoal;
 	}
-	
-	
+	//std::cout << "Local goal: " << robot->localgoal << "\n";
 	
 	robot->pos = (ModelPosition*)mod;
 	robot->pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, robot );
@@ -303,7 +337,10 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			
 			}
 		}
-
+	
+	if(robot->goalrunnmbr < maxruns){
+	
+	
 	double* ranges_bit = new double[scount]();
 	for (int i=0; i<scount; i++)
 	{
@@ -346,21 +383,90 @@ int SonarUpdate( Model* mod, robot_t* robot )
 	
 	int winner = std::distance(robot->a, std::max_element(robot->a, robot->a + placecells)); // get winner cell
 	
+	if (robot->itrs==0) robot->currsrc = winner;
+	
 	if (winner==robot->currgoal) 
 	{
-		std::cout << "Goal(" << winner << ") reached! It took " << robot->itrs << " iterations\n";
+		//std::cout << "\nGoal " << winner << " reached! It took " << robot->itrs << " iterations\n";
+		
+		if (robot->itrs > 1) 
+		{
+			std::cout << "Run " << robot->goalrunnmbr+1 << " complete \n";
+			robot->itrstotal[robot->goalrunnmbr] = robot->itrs;
+			robot->goalrunnmbr += 1;
+		}
+		
 		robot->itrs = 0;
 		robot->currgoal = robot->goals[rand()%(robot->ttlgoals)];
-		std::cout << "Next goal = " << robot->currgoal << "\n";
+		//std::cout << "Next goal = " << robot->currgoal << "\n";
+		
+		//if(winner==robot->currgoal) std::cout << "WINNER == NEXT GOAL\n";
+		dijkstra(robot->w_lat, robot->goals, robot->ttlgoals, winner, robot->currgoal, robot->inter);
+		//std::cout << "Intermediate goals: ";
+		/*sfor (int i=0; i<robot->ttlgoals; i++)
+		{
+			if (robot->inter[i]!=-1) std::cout << robot->inter[i] << " ";
+		}*/
+		for (int i=robot->ttlgoals-1; i>-1; i--)
+		{
+			if (robot->inter[i]!=-1) 
+			{
+				robot->localgoal = robot->inter[i];
+				robot->localind = i;
+				break;
+			}
+			if (i==0) robot->localgoal = robot->currgoal;
+		}
+		//std::cout << "Local goal: " << robot->localgoal << ", localind = " << robot->localind << "\n";
+		robot->turnedtogoal = false;
+		robot->currsrc = winner;
+	}
+	robot->itrs+=1;
+		
+	if (winner!=robot->currgoal && winner==robot->localgoal && robot->localind!=0)
+	{
+		//std::cout << "Local goal " << winner << " reached!\n";
+		for (int i=robot->localind-1; i>-1; i--)
+		{
+			if (robot->inter[i]!=-1) 
+			{
+				robot->localgoal = robot->inter[i];
+				robot->localind = i;
+				break;
+			}
+		}
+		//std::cout << "Next local goal: " << robot->localgoal << ", localind = " << robot->localind << "\n";
+		robot->turnedtogoal = false;
+		robot->currsrc = winner;
 	}
 	
-	robot->itrs+=1;
+	if (winner!=robot->currgoal && winner==robot->localgoal && robot->localind==0) 
+	{
+		//std::cout <<"Local goal "<<robot->localgoal<<" reached! Next local goal is current goal\n";
+		robot->localgoal = robot->currgoal;	
+		robot->turnedtogoal = false;
+		robot->currsrc = winner;
+	}
 	
 	for (int i=0; i<placecells; i++)
 	{
 		robot->a_old[i] = robot->a[i];
 	}
 		
+		
+	if(robot->goalrunnmbr == maxruns)
+	{
+		std::cout<<"Writing iterations numbers to file!\n";
+		std::ofstream of;
+		of.open("naviters.txt");
+		for (int i=0; i<maxruns; i++)
+		{
+			of << robot->itrstotal[i] << "\n";
+		}
+		of.close();
+	}
+	
+	
 		
 	bool obstruction = false;
 	bool stop = false;
@@ -388,16 +494,27 @@ int SonarUpdate( Model* mod, robot_t* robot )
     if( ranges[lfront] < stopdist ) minleft = std::min( minleft, ranges[lfront] );
     else if ( ranges[rfront] < stopdist)	minright = std::min( minright, ranges[rfront] );
       
-    //printf( "minleft %.3f, lfront %.3f \n", minleft, ranges[lfront] );
-	//printf( "minright %.3f, rfront %.3f \n ", minright, ranges[rfront] );  
-      
-	if( verbose ) 
-    {
-		puts( "" );
-		printf( "minleft %.3f \n", minleft );
-		printf( "minright %.3f\n ", minright );
+	if(!robot->turnedtogoal)
+	{
+		if (robot->moving == true)
+		{
+			//std::cout << "Stopping ROBOT movement\n";
+			robot->pos->SetXSpeed(0.0);
+			robot->pos->SetTurnSpeed(0.0);
+			robot->moving = false;
 		}
+		//std::cout << "POSE" << pose.x<<" "<<pose.y<<" "<<pose.a<<"\n";
+		//std::cout << "GoTo"<<pose.x<<" "<<pose.y<<" "<<robot->w_lat[robot->localgoal][robot->currsrc][1]<<"\n";
+		robot->pos->GoTo(pose.x,pose.y,robot->w_lat[robot->localgoal][robot->currsrc][1]);
+		if (std::abs(pose.a - robot->w_lat[robot->localgoal][robot->currsrc][1])<0.1) 
+			{
+				robot->turnedtogoal = true;
+				//std::cout << "ROBOT Turned to local goal "<<robot->localgoal<<"\n";
+			}
+	}
 
+	if (robot->turnedtogoal) {
+	robot->moving=true;
 	if( obstruction || stop || (robot->avoidcount>0) )
     {
 		if( verbose ) printf( "Avoid %d\n", robot->avoidcount );
@@ -425,7 +542,7 @@ int SonarUpdate( Model* mod, robot_t* robot )
 		
       robot->avoidcount--;
     } 
-	else
+	else //issues true random walk
     {
 		if( verbose ) puts( "Cruise" );
 
@@ -462,8 +579,8 @@ int SonarUpdate( Model* mod, robot_t* robot )
 			robot->forwardcount++;
 		}
 	}
-		
-  
+	}
+  }
   return 0; // run again
 }
 

@@ -12,6 +12,7 @@ SET( PLUGINS
   evaluation
   navigation
   random_walk
+  goal_exploration
 )
 
 # create a library module for each plugin and link libstage to each
